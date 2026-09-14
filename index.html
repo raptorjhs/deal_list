@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Deal List</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="mast">
+      <h1>Deal List</h1>
+    </header>
+
+    <div class="meta-row">
+      <span id="count">Loading deals…</span>
+      <span id="as-of"></span>
+    </div>
+
+    <div class="table-shell">
+      <table>
+        <thead>
+          <tr>
+            <th>M&amp;A Deal Name</th>
+            <th>Status</th>
+            <th>Announced Date</th>
+            <th>Summary</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <footer>
+      <p>Compiled for reference only. Not investment advice. Deal terms, status and values may move after publication.</p>
+      <p>Black-and-white edition · 2026</p>
+    </footer>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

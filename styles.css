@@ -1,0 +1,467 @@
+:root {
+  --bg: #ffffff;
+  --ink: #0b0b0b;
+  --muted: #4a4a4a;
+  --rule: #0b0b0b;
+  --rule-soft: #d6d6d6;
+  --paper: #ffffff;
+  --closed: #0b0b0b;
+  --pending: transparent;
+  --radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  line-height: 1.45;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  border-top: 8px solid var(--ink);
+}
+
+a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 24px 80px;
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
+  padding-bottom: max(80px, env(safe-area-inset-bottom));
+}
+
+header.mast {
+  border-bottom: 3px solid var(--ink);
+  padding-bottom: 18px;
+  margin-bottom: 28px;
+}
+
+.kicker {
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+h1 {
+  font-family: "Space Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: clamp(42px, 7vw, 72px);
+  letter-spacing: -0.03em;
+  line-height: 0.92;
+}
+
+.subhead {
+  margin-top: 14px;
+  max-width: 640px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 18px 0 16px;
+}
+
+.search {
+  flex: 1;
+  min-width: 180px;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  padding: 10px 12px;
+  min-height: 44px;
+}
+
+.search:focus {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filters button {
+  background: transparent;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 10px 12px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.filters button.active,
+.filters button:hover {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.meta-row {
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.table-shell {
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 860px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 14px 16px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+th {
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--ink);
+  background: var(--paper);
+  position: sticky;
+  top: 0;
+}
+
+tbody tr:hover {
+  background: #f3f3f3;
+}
+
+td.deal-name {
+  font-weight: 600;
+  min-width: 200px;
+}
+
+td.summary {
+  color: var(--muted);
+  font-size: 14px;
+  max-width: 360px;
+}
+
+.status {
+  display: inline-block;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.status.closed,
+.status.completed {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.status.pending {
+  background: transparent;
+}
+
+.status.litigation,
+.status.review {
+  background: transparent;
+  border-style: dashed;
+}
+
+.details-link {
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+footer {
+  margin-top: 36px;
+  border-top: 1px solid var(--ink);
+  padding-top: 16px;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Deal pages */
+.crumb {
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 12px;
+  margin-bottom: 22px;
+}
+
+.deal-title {
+  font-family: "Space Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: clamp(34px, 5vw, 56px);
+  line-height: 0.95;
+  margin-bottom: 10px;
+}
+
+.deal-lede {
+  font-size: 18px;
+  max-width: 720px;
+  margin: 16px 0 28px;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  margin-bottom: 32px;
+}
+
+.fact {
+  padding: 16px 18px 16px 0;
+  border-right: 1px solid var(--rule-soft);
+}
+
+.fact:last-child {
+  border-right: 0;
+}
+
+.fact dt {
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.fact dd {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.section {
+  max-width: 760px;
+  margin-bottom: 28px;
+}
+
+.section h2 {
+  font-family: "Playfair Display", "Times New Roman", Times, serif;
+  font-size: 26px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 6px;
+}
+
+.section p + p {
+  margin-top: 12px;
+}
+
+.section ul {
+  padding-left: 18px;
+}
+
+.section li + li {
+  margin-top: 6px;
+}
+
+.sources {
+  font-size: 13px;
+}
+
+/* iPad mini portrait (~744) and Fold 8 inner portrait (~616) */
+@media (max-width: 860px) {
+  .wrap {
+    padding: 20px 16px 64px;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  h1 {
+    font-size: clamp(34px, 11vw, 56px);
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .filters button {
+    width: 100%;
+  }
+
+  .meta-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .table-shell {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 760px;
+  }
+
+  th,
+  td {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  td.deal-name {
+    position: sticky;
+    left: 0;
+    background: var(--paper);
+    z-index: 1;
+    min-width: 160px;
+    box-shadow: 4px 0 8px -6px rgba(0, 0, 0, 0.25);
+  }
+
+  th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--paper);
+  }
+
+  td.summary {
+    min-width: 240px;
+    font-size: 13px;
+  }
+
+  .facts {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .fact {
+    border-right: 0;
+    padding: 14px 12px 14px 0;
+  }
+
+  .fact:nth-child(odd) {
+    padding-right: 12px;
+  }
+
+  .deal-lede {
+    font-size: 16px;
+  }
+
+  .section h2 {
+    font-size: 22px;
+  }
+}
+
+/* iPhone and Fold 8 cover (~390–430 CSS px) */
+@media (max-width: 480px) {
+  .wrap {
+    padding: 16px 14px 56px;
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+
+  body {
+    border-top-width: 6px;
+  }
+
+  .kicker {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+  }
+
+  h1,
+  .deal-title {
+    font-size: clamp(30px, 12vw, 40px);
+    overflow-wrap: anywhere;
+  }
+
+  .facts {
+    grid-template-columns: 1fr;
+  }
+
+  .fact {
+    border-bottom: 1px solid var(--rule-soft);
+    padding: 12px 0;
+  }
+
+  .fact:last-child {
+    border-bottom: 0;
+  }
+
+  footer {
+    flex-direction: column;
+  }
+}
+
+/* Fold 8 cover is short as well as narrow */
+@media (max-width: 480px) and (max-height: 720px) {
+  header.mast {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+  }
+
+  .toolbar {
+    margin: 10px 0 10px;
+  }
+}
