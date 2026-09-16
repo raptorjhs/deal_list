@@ -2,7 +2,8 @@ name: Update deals
 
 on:
   schedule:
-    # Friday 18:40 HKT (UTC+8) = Friday 10:40 UTC
+    # Friday 18:40 HKT = Friday 10:40 UTC.
+    # Odd ISO weeks are skipped so the list refreshes every two weeks.
     - cron: "40 10 * * 5"
   workflow_dispatch:
 
@@ -13,18 +14,40 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
+      - name: Decide whether this run should scrape
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "Manual run"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          week=$(date -u +%V)
+          echo "ISO week $week"
+          if [ $((10#$week % 2)) -eq 0 ]; then
+            echo "Even week — scrape"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Odd week — skip scheduled run"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout
+        if: steps.gate.outputs.run == 'true'
         uses: actions/checkout@v4
 
       - name: Set up Python
+        if: steps.gate.outputs.run == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Scrape WSJ headlines into deals.json
+      - name: Scrape a fresh deals.json
+        if: steps.gate.outputs.run == 'true'
         run: python scrape_wsj_ma.py --output deals.json
 
       - name: Commit deals.json if it changed
+        if: steps.gate.outputs.run == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -32,6 +55,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No deal changes"
           else
-            git commit -m "Update deals.json from WSJ RSS"
+            git commit -m "Replace deals.json with a fresh WSJ scrape"
             git push
           fi
