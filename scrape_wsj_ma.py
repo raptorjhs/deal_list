@@ -12,6 +12,7 @@ No third-party packages required (stdlib only).
 Usage:
   python scrape_wsj_ma.py
   python scrape_wsj_ma.py --output deals.json
+  python scrape_wsj_ma.py --merge   # optional: append only new headlines
 """
 
 from __future__ import annotations
@@ -300,27 +301,29 @@ def write_deals(path: Path, rows: list[dict]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Scrape WSJ M&A headlines to JSON")
     parser.add_argument("--output", "-o", default="deals.json", help="Output JSON path")
-    parser.add_argument("--replace", action="store_true", help="Overwrite instead of merge")
+    parser.add_argument(
+        "--merge",
+        action="store_true",
+        help="Append new headlines to the existing file instead of replacing it",
+    )
     args = parser.parse_args()
 
     rows = fetch_entries()
     out = Path(args.output)
-    existing = [] if args.replace else load_existing(out)
 
-    if not rows and not existing:
-        print("No M&A headlines found.", file=sys.stderr)
+    if not rows:
+        print("No M&A headlines found. Left existing file unchanged.", file=sys.stderr)
         sys.exit(1)
 
-    if args.replace:
-        merged = rows
-        added = len(rows)
-    else:
+    if args.merge:
+        existing = load_existing(out)
         merged, added = merge_rows(existing, rows)
+        write_deals(out, merged)
+        print(f"\nMerged {added} new deals. File now has {len(merged)} → {out.resolve()}")
+        return
 
-    write_deals(out, merged)
-    print(
-        f"\nWrote {len(merged)} deals ({added} new) → {out.resolve()}"
-    )
+    write_deals(out, rows)
+    print(f"\nReplaced deals.json with {len(rows)} scraped headlines → {out.resolve()}")
 
 
 if __name__ == "__main__":
