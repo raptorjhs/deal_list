@@ -236,33 +236,32 @@ def fetch_entries() -> list[dict]:
                     company_b = clean_company(m.group("b"))
                     if not company_a:
                         company_a = clean_company(title.split()[0])
+            name = " / ".join([part for part in (company_a, company_b) if part]) or title
             rows.append(
                 {
-                    "company_a": company_a,
-                    "company_b": company_b,
-                    "headline": title,
+                    "name": name,
+                    "summary": title,
+                    "date": normalize_time(entry["pub"]),
                     "link": google_news_link(company_a, company_b),
-                    "time": normalize_time(entry["pub"]),
                 }
             )
             seen.add(key)
             kept += 1
         print(f"  kept {kept} M&A items from this feed")
 
-    rows.sort(key=lambda r: r.get("time") or "", reverse=True)
+    rows.sort(key=lambda r: r.get("date") or r.get("time") or "", reverse=True)
     return rows
 
 
 def deal_key(row: dict) -> str:
-    headline = re.sub(r"\s+", " ", (row.get("headline") or "").lower()).strip()
-    if headline:
-        return "h:" + headline
-    pair = (
-        (row.get("company_a") or "").strip().lower()
-        + "|"
-        + (row.get("company_b") or "").strip().lower()
-    )
-    return "p:" + pair
+    summary = re.sub(
+        r"\s+",
+        " ",
+        (row.get("summary") or row.get("headline") or "").lower(),
+    ).strip()
+    if summary:
+        return "s:" + summary
+    return "n:" + (row.get("name") or "").strip().lower()
 
 
 def load_existing(path: Path) -> list[dict]:
