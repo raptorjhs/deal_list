@@ -1,33 +1,107 @@
 {
-  "updated": "2026-09-19",
+  "updated": "2026-09-14",
   "deals": [
     {
-      "company_a": "",
-      "company_b": "",
-      "headline": "FTC Requests Additional Information Regarding Fertitta, Caesars Merger",
-      "link": "https://news.google.com/search?q=%22%22&hl=en-US&gl=US&ceid=US:en",
-      "time": "2026-09-17T14:40:00+00:00"
+      "name": "NextEra / Dominion",
+      "summary": "NextEra Energy Reaffirms 2026 Guidance at Top End of Range as $67 Billion Dominion Merger Progresses",
+      "date": "2026-09-14T13:59:00+00:00",
+      "link": "https://news.google.com/search?q=%22NextEra%22%20%22Dominion%22&hl=en-US&gl=US&ceid=US:en"
     },
     {
-      "company_a": "Mark Walter, Todd Boehly",
-      "company_b": "Stake",
-      "headline": "Mark Walter, Todd Boehly to Sell Stake in Chelsea for $1.3 Billion",
-      "link": "https://news.google.com/search?q=%22Mark%20Walter%2C%20Todd%20Boehly%22%20%22Stake%22&hl=en-US&gl=US&ceid=US:en",
-      "time": "2026-09-17T12:04:00+00:00"
+      "name": "Euronext / Deutsche Boerse",
+      "summary": "Euronext, Deutsche Boerse Shares Rise After CEO’s Merger Comments",
+      "date": "2026-09-14T11:24:00+00:00",
+      "link": "https://news.google.com/search?q=%22Euronext%22%20%22Deutsche%20Boerse%22&hl=en-US&gl=US&ceid=US:en"
     },
     {
-      "company_a": "",
-      "company_b": "",
-      "headline": "Brookfield Agrees to $2.9 Billion Acquisition of Australia’s Reliance",
-      "link": "https://news.google.com/search?q=%22%22&hl=en-US&gl=US&ceid=US:en",
-      "time": "2026-09-16T08:23:00+00:00"
+      "name": "J&J / Apollo",
+      "summary": "J&J Is in Talks to Sell Its Hips-and-Knees Business to Apollo for $20 Billion",
+      "date": "2026-09-12T19:40:00+00:00",
+      "link": "https://news.google.com/search?q=%22J%26J%22%20%22Apollo%22&hl=en-US&gl=US&ceid=US:en"
     },
     {
-      "company_a": "Analog Devices",
-      "company_b": "Alif Semiconductor",
-      "headline": "Analog Devices to Acquire Alif Semiconductor for $1.35 Billion",
-      "link": "https://news.google.com/search?q=%22Analog%20Devices%22%20%22Alif%20Semiconductor%22&hl=en-US&gl=US&ceid=US:en",
-      "time": "2026-09-09T13:06:00+00:00"
+      "name": "Analog Devices / Alif Semiconductor",
+      "summary": "Analog Devices to Acquire Alif Semiconductor for $1.35 Billion",
+      "date": "2026-09-09T13:06:00+00:00",
+      "link": "https://news.google.com/search?q=%22Analog%20Devices%22%20%22Alif%20Semiconductor%22&hl=en-US&gl=US&ceid=US:en"
+    },
+    {
+      "name": "EverBank / WaFd",
+      "summary": "EverBank to Combine With WaFd to Create $75 Billion Bank",
+      "date": "2026-09-07T20:30:00+00:00",
+      "link": "https://news.google.com/search?q=%22EverBank%22%20%22WaFd%22&hl=en-US&gl=US&ceid=US:en"
+    },
+    {
+      "name": "SpaceX / xAI",
+      "summary": "SpaceX Absorbs xAI in Combination of Launch, Satellite and AI",
+      "date": "2026-02-02",
+      "link": "https://www.reuters.com/legal/mergers-acquisitions/"
+    },
+    {
+      "name": "Paramount Skydance / Warner Bros. Discovery",
+      "summary": "Paramount Skydance Agrees $31-a-Share Cash Bid for Warner Bros. Discovery",
+      "date": "2026-02-27",
+      "link": "https://www.whitecase.com/insight-alert/us-public-ma-market-update-h1-2026"
+    },
+    {
+      "name": "Union Pacific / Norfolk Southern",
+      "summary": "Union Pacific to Buy Norfolk Southern in $85 Billion Railroad Merger",
+      "date": "2025-07-29",
+      "link": "https://www.stb.gov/resources/major-railroad-mergers/"
+    },
+    {
+      "name": "Equity Residential / AvalonBay",
+      "summary": "Equity Residential and AvalonBay Agree All-Stock Apartment Merger",
+      "date": "2026-05-21",
+      "link": "https://www.whitecase.com/insight-alert/us-public-ma-market-update-h1-2026"
+    },
+    {
+      "name": "PIF / Silver Lake / Affinity — Electronic Arts",
+      "summary": "PIF, Silver Lake and Affinity Take Electronic Arts Private in $55 Billion LBO",
+      "date": "2025-09-29",
+      "link": "https://apnews.com/article/electronic-arts-sims-battlefield-silver-lake-e50d653ac4616d063296e2021d826a3c"
+    },
+    {
+      "name": "Devon Energy / Coterra Energy",
+      "summary": "Devon Energy and Coterra Energy Combine in All-Stock Shale Merger",
+      "date": "2026-02-02",
+      "link": "https://www.whitecase.com/insight-alert/us-public-ma-market-update-h1-2026"
+    },
+    {
+      "name": "Nvidia / Hugging Face",
+      "summary": "Nvidia Agrees to Acquire Hugging Face for About $12.9 Billion",
+      "date": "2026-09-03",
+      "link": "https://www.ft.com/mergers-acquisitions"
+    },
+    {
+      "name": "Fox Corporation / Roku",
+      "summary": "Fox Agrees to Buy Roku in Cash-and-Stock Deal Valued at About $22 Billion",
+      "date": "2026-06-15",
+      "link": "https://www.reuters.com/legal/mergers-acquisitions/"
+    },
+    {
+      "name": "Aon / USI",
+      "summary": "Aon to Acquire KKR-Owned Insurance Broker USI for About $17 Billion",
+      "date": "2026-09-01",
+      "link": "https://news.mergerlinks.com/"
+    },
+    {
+      "name": "Copart / ACV Auctions",
+      "summary": "Copart Agrees to Buy ACV Auctions for About $1.9 Billion Cash",
+      "date": "2026-09-10",
+      "link": "https://www.reuters.com/legal/mergers-acquisitions/"
+    },
+    {
+      "name": "Bending Spoons / Miro",
+      "summary": "Bending Spoons to Acquire Miro in $1.36 Billion All-Cash Deal",
+      "date": "2026-09-10",
+      "link": "https://www.reuters.com/legal/mergers-acquisitions/"
+    },
+    {
+      "name": "Enbridge / Tallgrass crude business",
+      "summary": "Enbridge to Buy Tallgrass Crude Business for $2.55 Billion Cash",
+      "date": "2026-09-09",
+      "link": "https://www.reuters.com/legal/mergers-acquisitions/"
     }
   ]
 }
