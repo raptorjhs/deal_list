@@ -7,12 +7,6 @@
     if (count) count.textContent = n + (n === 1 ? " deal listed" : " deals listed");
   }
 
-  function statusClass(status) {
-    if (status === "closed" || status === "completed") return "closed";
-    if (status === "review" || status === "litigation") return "review";
-    return "pending";
-  }
-
   function escapeHtml(value) {
     return String(value == null ? "" : value)
       .replace(/&/g, "&amp;")
@@ -21,7 +15,7 @@
       .replace(/"/g, "&quot;");
   }
 
-  function formatTime(value) {
+  function formatDate(value) {
     if (!value) return "";
     var d = new Date(value);
     if (isNaN(d.getTime())) return String(value);
@@ -34,14 +28,11 @@
     if (!name && (raw.company_a || raw.company_b)) {
       name = [raw.company_a, raw.company_b].filter(Boolean).join(" / ");
     }
-    var announced = raw.announced || (raw.time ? String(raw.time).slice(0, 10) : "");
     return {
-      name: name || raw.headline || "Untitled deal",
-      status: raw.status || "pending",
-      status_label: raw.status_label || "Pending",
-      announced_display: raw.announced_display || formatTime(raw.time || announced),
-      headline: raw.headline || "",
-      source_url: raw.source_url || raw.link || ""
+      name: name || "Untitled deal",
+      summary: raw.summary || raw.headline || "",
+      date: raw.date || raw.time || raw.announced || raw.announced_display || "",
+      link: raw.link || raw.source_url || ""
     };
   }
 
@@ -56,20 +47,17 @@
     if (asOf && data && data.updated) asOf.textContent = "As of " + data.updated;
     tbody.innerHTML = deals.map((deal) => {
       const name = escapeHtml(deal.name);
-      const status = escapeHtml(deal.status);
-      const label = escapeHtml(deal.status_label);
-      const date = escapeHtml(deal.announced_display || "");
-      const headline = escapeHtml(deal.headline);
-      const href = escapeHtml(deal.source_url);
+      const summary = escapeHtml(deal.summary);
+      const date = escapeHtml(formatDate(deal.date));
+      const href = escapeHtml(deal.link);
       const nameCell = href
         ? "<a href=\"" + href + "\" target=\"_blank\" rel=\"noopener\">" + name + "</a>"
         : name;
       return (
         "<tr>" +
           "<td class=\"deal-name\">" + nameCell + "</td>" +
-          "<td><span class=\"status " + statusClass(status) + "\">" + label + "</span></td>" +
+          "<td class=\"summary\">" + summary + "</td>" +
           "<td class=\"date\">" + date + "</td>" +
-          "<td class=\"summary\">" + headline + "</td>" +
         "</tr>"
       );
     }).join("");
