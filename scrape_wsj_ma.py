@@ -24,7 +24,7 @@ import sys
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import date, timezone
+from datetime import date, datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
@@ -293,7 +293,10 @@ def merge_rows(existing: list[dict], incoming: list[dict]) -> tuple[list[dict], 
 
 
 def write_deals(path: Path, rows: list[dict]) -> None:
-    payload = {"updated": date.today().isoformat(), "deals": rows}
+    payload = {
+        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "deals": rows,
+    }
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
