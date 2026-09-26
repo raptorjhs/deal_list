@@ -2,8 +2,7 @@ name: Update deals
 
 on:
   schedule:
-    # Friday 18:40 HKT = Friday 10:40 UTC.
-    # Odd ISO weeks are skipped so the list refreshes every two weeks.
+    # Friday 18:30 HKT = Friday 10:30 UTC
     - cron: "30 10 * * 5"
   workflow_dispatch:
 
@@ -14,47 +13,40 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
-      - name: Decide whether this run should scrape
-        id: gate
-        run: |
-          if [ "${{ github.event_name }}" != "schedule" ]; then
-            echo "Manual run"
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          week=$(date -u +%V)
-          echo "ISO week $week"
-          if [ $((10#$week % 2)) -eq 0 ]; then
-            echo "Even week — scrape"
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Odd week — skip scheduled run"
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Checkout
-        if: steps.gate.outputs.run == 'true'
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Set up Python
-        if: steps.gate.outputs.run == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Scrape a fresh deals.json
-        if: steps.gate.outputs.run == 'true'
-        run: python scrape_wsj_ma.py --output deals.json
+        run: |
+          python scrape_wsj_ma.py --output deals.json
+          echo "---- deals.json head ----"
+          python - << 'PY'
+          import json
+          data = json.load(open("deals.json", encoding="utf-8"))
+          deals = data["deals"] if isinstance(data, dict) else data
+          print("updated:", data.get("updated") if isinstance(data, dict) else "")
+          print("count:", len(deals))
+          for row in deals[:3]:
+              print("-", row.get("name"), "|", (row.get("summary") or "")[:80])
+          PY
+          git status --short deals.json
+          git diff --stat deals.json
 
       - name: Commit deals.json if it changed
-        if: steps.gate.outputs.run == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add deals.json
           if git diff --cached --quiet; then
-            echo "No deal changes"
-          else
-            git commit -m "Replace deals.json with a fresh WSJ scrape"
-            git push
+            echo "No deal changes to commit"
+            exit 0
           fi
+          git commit -m "Replace deals.json with a fresh WSJ scrape"
+          git push
