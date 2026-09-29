@@ -2,10 +2,7 @@
   const count = document.getElementById("count");
   const asOf = document.getElementById("as-of");
   const tbody = document.getElementById("rows");
-
-  function setCount(n) {
-    if (count) count.textContent = n + (n === 1 ? " deal listed" : " deals listed");
-  }
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
   function escapeHtml(value) {
     return String(value == null ? "" : value)
@@ -17,10 +14,14 @@
 
   function formatDate(value) {
     if (!value) return "";
+    if (/^\d{1,2} [A-Z][a-z]{2} \d{4}$/.test(String(value).trim())) return String(value).trim();
     var d = new Date(value);
     if (isNaN(d.getTime())) return String(value);
-    var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     return d.getUTCDate() + " " + months[d.getUTCMonth()] + " " + d.getUTCFullYear();
+  }
+
+  function googleNewsUrl(name) {
+    return "https://news.google.com/search?q=" + encodeURIComponent(name) + "&hl=en-US&gl=US&ceid=US:en";
   }
 
   function normalizeDeal(raw) {
@@ -28,11 +29,12 @@
     if (!name && (raw.company_a || raw.company_b)) {
       name = [raw.company_a, raw.company_b].filter(Boolean).join(" / ");
     }
+    name = name || "Untitled deal";
     return {
-      name: name || "Untitled deal",
+      name: name,
       summary: raw.summary || raw.headline || "",
-      date: raw.date || raw.time || raw.announced || raw.announced_display || "",
-      link: raw.link || raw.source_url || ""
+      date: formatDate(raw.date || raw.time || raw.announced || raw.updated || ""),
+      link: googleNewsUrl(name)
     };
   }
 
@@ -43,34 +45,29 @@
   }
 
   function render(data) {
-    const deals = listDeals(data);
-    if (asOf && data && data.updated) asOf.textContent = "As of " + data.updated;
-    tbody.innerHTML = deals.map((deal) => {
-      const name = escapeHtml(deal.name);
-      const summary = escapeHtml(deal.summary);
-      const date = escapeHtml(formatDate(deal.date));
-      const href = escapeHtml(deal.link);
-      const nameCell = href
-        ? "<a href=\"" + href + "\" target=\"_blank\" rel=\"noopener\">" + name + "</a>"
-        : name;
+    var deals = listDeals(data);
+    if (asOf && data && data.updated) asOf.textContent = "As of " + formatDate(data.updated);
+    tbody.innerHTML = deals.map(function (deal) {
+      var name = escapeHtml(deal.name);
+      var href = escapeHtml(deal.link);
       return (
         "<tr>" +
-          "<td class=\"deal-name\">" + nameCell + "</td>" +
-          "<td class=\"summary\">" + summary + "</td>" +
-          "<td class=\"date\">" + date + "</td>" +
+          "<td class=\"deal-name\"><a href=\"" + href + "\" target=\"_blank\" rel=\"noopener\">" + name + "</a></td>" +
+          "<td class=\"summary\">" + escapeHtml(deal.summary) + "</td>" +
+          "<td class=\"date\">" + escapeHtml(deal.date) + "</td>" +
         "</tr>"
       );
     }).join("");
-    setCount(deals.length);
+    if (count) count.textContent = deals.length + (deals.length === 1 ? " deal listed" : " deals listed");
   }
 
   fetch("deals.json", { cache: "no-store" })
-    .then((res) => {
+    .then(function (res) {
       if (!res.ok) throw new Error("Could not load deals.json");
       return res.json();
     })
     .then(render)
-    .catch((err) => {
+    .catch(function (err) {
       if (count) count.textContent = "Could not load deals.json";
       console.error(err);
     });
