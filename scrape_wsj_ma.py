@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 """
-WSJ M&A headline scraper.
+Collect M&A headlines and write deals.json.
 
-Fetches public WSJ RSS feeds (more reliable than the JS-protected
-https://www.wsj.com/business/deals page), keeps only merger /
-acquisition / deal headlines, extracts Company A / Company B from
-the headline text, and writes JSON.
+Source order:
+  1. https://www.wsj.com/business/deals  (HTML titles)
+  2. Public WSJ RSS feeds, if the website blocks the request
 
-No third-party packages required (stdlib only).
+Each row:
+  name     Company A / Company B
+  summary  Article title
+  date     DD MMM YYYY
+  link     Google News search for the deal name
 
 Usage:
   python scrape_wsj_ma.py
   python scrape_wsj_ma.py --output deals.json
-  python scrape_wsj_ma.py --merge   # optional: append only new headlines
 """
 
 from __future__ import annotations
@@ -24,308 +26,229 @@ import sys
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from html import unescape
 from pathlib import Path
 
 
-FEEDS = [
+WSJ_DEALS_URL = "https://www.wsj.com/business/deals"
+WSJ_RSS = [
     "https://feeds.content.dowjones.io/public/rss/WSJcomUSBusiness",
     "https://feeds.content.dowjones.io/public/rss/RSSMarketsMain",
     "https://feeds.content.dowjones.io/public/rss/RSSWSJD",
 ]
+MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
-MA_POSITIVE = re.compile(
-    r"\b("
-    r"merger|merge|merging|"
-    r"acquisition|acquire|acquires|acquired|acquiring|"
-    r"takeover|buyout|buy-out|"
-    r"to buy|to acquire|"
-    r"combination|combine|"
-    r"take-private|take private|"
-    r"spin-?off|divest"
-    r")\b",
-    re.IGNORECASE,
+MA_WORDS = re.compile(
+    r"\b(merger|merge|merging|acquisition|acquire|acquires|acquired|acquiring|"
+    r"takeover|buyout|buy-out|to buy|to acquire|combination|combine|"
+    r"take-private|take private|spin-?off|divest)\b",
+    re.I,
 )
-
-# Weaker deal language is only accepted if the URL is clearly a deals article
-WEAK_DEAL = re.compile(
-    r"\b(deal|offer|bid|to sell|sells|sold|stake)\b",
-    re.IGNORECASE,
+WEAK_DEAL = re.compile(r"\b(deal|offer|bid|to sell|sells|sold|stake)\b", re.I)
+SKIP_WORDS = re.compile(
+    r"\b(trade deal|cloud deal|licensing deal|content deal|supply deal|"
+    r"labor|union|factory|workers|ipo|news quiz|podcast|opinion|guidance)\b",
+    re.I,
 )
-
-MA_NEGATIVE = re.compile(
-    r"\b("
-    r"trade deal|cloud deal|licensing deal|content deal|supply deal|"
-    r"labor|union|factory|workers|"
-    r"stock|shares rise|ipo|"
-    r"news quiz|podcast|opinion|guidance"
-    r")\b",
-    re.IGNORECASE,
-)
-
 PAIR_PATTERNS = [
-    re.compile(
-        r"^(?P<a>[^,]+),\s+(?P<b>.+?)\s+Shares\b",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"^(?P<a>.+?)\s+and\s+(?P<b>.+?)\s+(?:agree|agrees|announce|announces|plan|plans)\s+to\s+(?:merge|combine)",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"^(?P<a>.+?)\s+to\s+merge\s+with\s+(?P<b>.+?)(?:\s+in\b|$)",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"^(?P<a>.+?)\s+to\s+combine\s+with\s+(?P<b>.+?)(?:\s+to\b|$)",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"^(?P<a>.+?)\s+(?:to\s+)?(?:buy|acquire|acquires|acquired)\s+(?P<b>.+?)(?:\s+for\b|\s+in\b|$)",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"^(?P<a>.+?)\s+is\s+in\s+talks\s+to\s+(?:buy|sell|acquire)\s+(?:its\s+.+?\s+to\s+)?(?P<b>.+?)(?:\s+for\b|$)",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"^(?P<a>.+?)\s+in\s+(?:advanced\s+)?talks\s+to\s+buy\s+(?P<b>.+?)$",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"^(?P<a>.+?)\s+rejects?\s+(?P<b>.+?)\s+(?:offer|bid)",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"^(?P<a>.+?)(?:'s)?\s+\$?[\d.]+\s+billion\s+takeover\s+bid.+\b(?P<b>[A-Z][\w.&' -]+)",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"^(?P<a>.+?)\s+(?:inks|signs|agrees).+sell.+\s+to\s+(?P<b>.+?)$",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"^(?P<a>.+?)-[Oo]wned\s+.+\s+to\s+buy\s+(?P<b>.+?)$",
-        re.IGNORECASE,
-    ),
+    re.compile(r"^(?P<a>[^,]+),\s+(?P<b>.+?)\s+Shares\b", re.I),
+    re.compile(r"^(?P<a>.+?)\s+and\s+(?P<b>.+?)\s+(?:agree|agrees|announce|announces|plan|plans)\s+to\s+(?:merge|combine)", re.I),
+    re.compile(r"^(?P<a>.+?)\s+to\s+merge\s+with\s+(?P<b>.+?)(?:\s+in\b|$)", re.I),
+    re.compile(r"^(?P<a>.+?)\s+to\s+combine\s+with\s+(?P<b>.+?)(?:\s+to\b|$)", re.I),
+    re.compile(r"^(?P<a>.+?)\s+(?:to\s+)?(?:buy|acquire|acquires|acquired)\s+(?P<b>.+?)(?:\s+for\b|\s+in\b|$)", re.I),
+    re.compile(r"^(?P<a>.+?)\s+is\s+in\s+talks\s+to\s+(?:buy|sell|acquire)\s+(?:its\s+.+?\s+to\s+)?(?P<b>.+?)(?:\s+for\b|$)", re.I),
+    re.compile(r"^(?P<a>.+?)\s+in\s+(?:advanced\s+)?talks\s+to\s+buy\s+(?P<b>.+?)$", re.I),
+    re.compile(r"^(?P<a>.+?)\s+rejects?\s+(?P<b>.+?)\s+(?:offer|bid)", re.I),
+    re.compile(r"^(?P<a>.+?)(?:'s)?\s+\$?[\d.]+\s+billion\s+takeover\s+bid.+\b(?P<b>[A-Z][\w.&' -]+)", re.I),
+    re.compile(r"^(?P<a>.+?)\s+(?:inks|signs|agrees).+sell.+\s+to\s+(?P<b>.+?)$", re.I),
 ]
 
 
-def is_ma(title: str, link: str) -> bool:
-    if re.search(r"\bipo\b", title, re.I) and not re.search(r"\b(merger|acquire|acquisition|takeover)\b", title, re.I):
+def format_date(value: str | None) -> str:
+    """Return DD MMM YYYY."""
+    text = (value or "").strip()
+    if not text:
+        now = datetime.now(timezone.utc)
+        return f"{now.day} {MONTHS[now.month - 1]} {now.year}"
+    try:
+        dt = parsedate_to_datetime(text)
+    except Exception:
+        dt = None
+    if dt is None:
+        try:
+            dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except Exception:
+            return text
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    dt = dt.astimezone(timezone.utc)
+    return f"{dt.day} {MONTHS[dt.month - 1]} {dt.year}"
+
+
+def google_news_link(name: str) -> str:
+    query = urllib.parse.quote(name.strip())
+    return f"https://news.google.com/search?q={query}&hl=en-US&gl=US&ceid=US:en"
+
+
+def is_ma(title: str, url: str = "") -> bool:
+    if SKIP_WORDS.search(title) and not MA_WORDS.search(title):
         return False
-    if MA_NEGATIVE.search(title) and not MA_POSITIVE.search(title):
-        return False
-    if MA_POSITIVE.search(title):
+    if MA_WORDS.search(title):
         return True
-    if "/business/deals/" in (link or "").lower() and WEAK_DEAL.search(title):
+    if "/business/deals/" in (url or "").lower() and WEAK_DEAL.search(title):
         return True
     return False
 
 
 def clean_company(name: str) -> str:
-    name = re.sub(r"\s+", " ", (name or "").strip())
-    name = re.sub(
-        r"\s+(?:for|in|to create|valued at|worth).+$",
-        "",
-        name,
-        flags=re.IGNORECASE,
-    )
-    name = re.sub(r"^(?:its|the)\s+", "", name, flags=re.IGNORECASE)
+    name = re.sub(r"\s+", " ", unescape(name or "").strip())
+    name = re.sub(r"\s+(?:for|in|to create|valued at|worth).+$", "", name, flags=re.I)
+    name = re.sub(r"^(?:its|the)\s+", "", name, flags=re.I)
     return name.strip(" -–—,;:")
 
 
-def extract_companies(title: str) -> tuple[str, str]:
+def deal_name(title: str) -> str:
     for pat in PAIR_PATTERNS:
-        m = pat.search(title)
-        if m:
-            a = clean_company(m.group("a"))
-            b = clean_company(m.group("b"))
-            if a and b and a.lower() != b.lower():
-                return a, b
-
-    fallback = re.split(
+        match = pat.search(title)
+        if match:
+            left = clean_company(match.group("a"))
+            right = clean_company(match.group("b"))
+            if left and right and left.lower() != right.lower():
+                return f"{left} / {right}"
+    parts = re.split(
         r"\s+(?:to buy|to acquire|acquires|acquired|to merge with|to combine with|rejects|sells|to sell)\s+",
         title,
         maxsplit=1,
-        flags=re.IGNORECASE,
+        flags=re.I,
     )
-    if len(fallback) == 2:
-        a = clean_company(fallback[0])
-        b = clean_company(re.split(r"\s+for\s+|\s+in\s+", fallback[1], maxsplit=1)[0])
-        if a and b:
-            return a, b
-    return "", ""
+    if len(parts) == 2:
+        left = clean_company(parts[0])
+        right = clean_company(re.split(r"\s+for\s+|\s+in\s+", parts[1], maxsplit=1)[0])
+        if left and right:
+            return f"{left} / {right}"
+    return clean_company(title) or title
 
 
-def google_news_link(company_a: str, company_b: str) -> str:
-    """Build a Google News search URL using quoted company names."""
-    terms = []
-    if company_a:
-        terms.append(f'"{company_a}"')
-    if company_b:
-        terms.append(f'"{company_b}"')
-    query = " ".join(terms).strip() or '""'
-    encoded = urllib.parse.quote(query)
-    return (
-        "https://news.google.com/search?"
-        f"q={encoded}&hl=en-US&gl=US&ceid=US:en"
-    )
+def fetch(url: str) -> bytes:
+    request = urllib.request.Request(url, headers=HEADERS)
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return response.read()
 
 
-def normalize_time(pub: str) -> str:
-    pub = (pub or "").strip()
-    if not pub:
-        return ""
-    try:
-        dt = parsedate_to_datetime(pub)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(timezone.utc).isoformat()
-    except Exception:
-        return pub
+def titles_from_html(html: str) -> list[str]:
+    titles: list[str] = []
+    seen: set[str] = set()
+    patterns = [
+        r'"headline"\s*:\s*"([^"]{12,180})"',
+        r"<h[23][^>]*>\s*(?:<a[^>]*>)?([^<]{12,180})",
+        r'href="https://www\.wsj\.com/business/deals/[^"]+"[^>]*>([^<]{12,180})',
+    ]
+    for pattern in patterns:
+        for raw in re.findall(pattern, html, flags=re.I):
+            title = unescape(re.sub(r"\s+", " ", raw)).strip()
+            key = title.lower()
+            if key in seen or title.lower() in {"latest news", "more in deals"}:
+                continue
+            seen.add(key)
+            titles.append(title)
+    return titles
 
 
-def fetch_rss(url: str) -> list[dict]:
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": "Mozilla/5.0 (compatible; WSJ-MA-Bot/1.0)"},
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        raw = resp.read()
-    root = ET.fromstring(raw)
-    items = []
-    for item in root.findall("./channel/item"):
-        items.append(
+def from_wsj_website() -> list[dict]:
+    print(f"Fetching {WSJ_DEALS_URL} ...")
+    html = fetch(WSJ_DEALS_URL).decode("utf-8", "replace")
+    titles = titles_from_html(html)
+    rows = []
+    today = format_date("")
+    for title in titles:
+        if not is_ma(title, WSJ_DEALS_URL):
+            continue
+        name = deal_name(title)
+        rows.append(
             {
-                "title": (item.findtext("title") or "").strip(),
-                "link": (item.findtext("link") or "").strip(),
-                "pub": (item.findtext("pubDate") or "").strip(),
+                "name": name,
+                "summary": title,
+                "date": today,
+                "link": google_news_link(name),
             }
         )
-    return items
+    print(f"  kept {len(rows)} M&A titles from the website")
+    return rows
 
 
-def fetch_entries() -> list[dict]:
-    seen: set[str] = set()
+def from_wsj_rss() -> list[dict]:
     rows: list[dict] = []
-
-    for url in FEEDS:
+    seen: set[str] = set()
+    for url in WSJ_RSS:
         print(f"Fetching {url} ...")
         try:
-            entries = fetch_rss(url)
+            xml = fetch(url)
         except Exception as exc:
             print(f"  warning: {exc}", file=sys.stderr)
             continue
-
+        root = ET.fromstring(xml)
         kept = 0
-        for entry in entries:
-            title = entry["title"]
-            link = entry["link"]
+        for item in root.findall("./channel/item"):
+            title = (item.findtext("title") or "").strip()
+            item_url = (item.findtext("link") or "").strip()
             key = re.sub(r"\s+", " ", title).lower()
-            if not title or not link or key in seen:
+            if not title or key in seen or not is_ma(title, item_url):
                 continue
-            if not is_ma(title, link):
-                continue
-            company_a, company_b = extract_companies(title)
-            # Extra fallback: "X Merger" mentioned later in the headline
-            if not company_b:
-                m = re.search(r"as\s+\$?[\d.]+\s+billion\s+(?P<b>.+?)\s+Merger", title, re.I)
-                if m:
-                    company_b = clean_company(m.group("b"))
-                    if not company_a:
-                        company_a = clean_company(title.split()[0])
-            name = " / ".join([part for part in (company_a, company_b) if part]) or title
+            name = deal_name(title)
             rows.append(
                 {
                     "name": name,
                     "summary": title,
-                    "date": normalize_time(entry["pub"]),
-                    "link": google_news_link(company_a, company_b),
+                    "date": format_date(item.findtext("pubDate") or ""),
+                    "link": google_news_link(name),
                 }
             )
             seen.add(key)
             kept += 1
-        print(f"  kept {kept} M&A items from this feed")
-
-    rows.sort(key=lambda r: r.get("date") or r.get("time") or "", reverse=True)
+        print(f"  kept {kept} M&A titles from this feed")
     return rows
-
-
-def deal_key(row: dict) -> str:
-    summary = re.sub(
-        r"\s+",
-        " ",
-        (row.get("summary") or row.get("headline") or "").lower(),
-    ).strip()
-    if summary:
-        return "s:" + summary
-    return "n:" + (row.get("name") or "").strip().lower()
-
-
-def load_existing(path: Path) -> list[dict]:
-    if not path.exists():
-        return []
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return []
-    if isinstance(data, list):
-        return [row for row in data if isinstance(row, dict)]
-    if isinstance(data, dict) and isinstance(data.get("deals"), list):
-        return [row for row in data["deals"] if isinstance(row, dict)]
-    return []
-
-
-def merge_rows(existing: list[dict], incoming: list[dict]) -> tuple[list[dict], int]:
-    existing_keys = {deal_key(row) for row in existing}
-    added = sum(1 for row in incoming if deal_key(row) not in existing_keys)
-    out: list[dict] = []
-    seen: set[str] = set()
-    for row in incoming + existing:
-        key = deal_key(row)
-        if not key or key in seen:
-            continue
-        seen.add(key)
-        out.append(row)
-    return out, added
 
 
 def write_deals(path: Path, rows: list[dict]) -> None:
     payload = {
-        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "updated": format_date(""),
         "deals": rows,
     }
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Scrape WSJ M&A headlines to JSON")
-    parser.add_argument("--output", "-o", default="deals.json", help="Output JSON path")
-    parser.add_argument(
-        "--merge",
-        action="store_true",
-        help="Append new headlines to the existing file instead of replacing it",
-    )
+    parser = argparse.ArgumentParser(description="Write a fresh deals.json from WSJ M&A titles")
+    parser.add_argument("--output", "-o", default="deals.json")
     args = parser.parse_args()
 
-    rows = fetch_entries()
-    out = Path(args.output)
+    rows: list[dict] = []
+    try:
+        rows = from_wsj_website()
+    except Exception as exc:
+        print(f"WSJ website blocked or failed ({exc}). Falling back to public WSJ RSS.", file=sys.stderr)
+
+    if not rows:
+        rows = from_wsj_rss()
 
     if not rows:
         print("No M&A headlines found. Left existing file unchanged.", file=sys.stderr)
         sys.exit(1)
 
-    if args.merge:
-        existing = load_existing(out)
-        merged, added = merge_rows(existing, rows)
-        write_deals(out, merged)
-        print(f"\nMerged {added} new deals. File now has {len(merged)} → {out.resolve()}")
-        return
-
+    out = Path(args.output)
     write_deals(out, rows)
-    print(f"\nReplaced deals.json with {len(rows)} scraped headlines → {out.resolve()}")
+    print(f"\nWrote {len(rows)} deals → {out.resolve()}")
 
 
 if __name__ == "__main__":
